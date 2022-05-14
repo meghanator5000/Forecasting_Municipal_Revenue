@@ -1,0 +1,294 @@
+---
+title: "chicago_use_proceeds"
+author: "Meghan Mokate"
+date: "7/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Reading in pdfs
+```{r load files, warning=FALSE}
+# reference source of pdf files
+chi_filenames <- list.files("/Users/meghanmokate/Desktop/use of proceeds/Chicago/txt_files", pattern="*.txt", full.names=TRUE)
+
+## allows to match file name by index, to join back to main dataset later
+chi_file_details <- as.data.frame(t(chi_filenames)) %>%
+  pivot_longer(cols = 1:length(chi_filenames)) %>%
+  mutate(name = str_sub(name, 2, 10))
+
+# read in the files to a dataset
+chi_files <- lapply(chi_filenames, read.delim)
+```
+
+## Create Use of Proceeds function
+```{r proceeds_use_function}
+# removed Plan of Refunding from search list
+funds <- function(x) { 
+  funds_result <- x %>%
+    rename(value = 1) %>%
+    mutate(funds = ifelse(grepl("sources and uses of funds|Authorization and Purpose|Application of Proceeds", value, ignore.case=TRUE), value, "no")) %>%
+    mutate(funds = ifelse(lag(funds) != "no", "yes",
+                           ifelse(lag(n = 2, funds != "no"), "yes", 
+                                  ifelse(lag(n = 3, funds != "no"), "yes",
+                                         ifelse(lag(n = 4, funds != "no"), "yes",
+                                                ifelse(lag(n = 5, funds != "no"), "yes", 
+                                                       ifelse(lag(n = 6, funds != "no"), "yes",
+                                                              ifelse(lag(n = 7, funds != "no"), "yes",
+                                                                     ifelse(lag(n = 8, funds != "no"), "yes",
+                                                                            ifelse(lag(n = 9, funds != "no"), "yes",
+                                                                                   ifelse(lag(n = 10, funds != "no"), "yes",
+                                                                                          ifelse(lag(n = 11, funds != "no"), "yes",
+                                                                                                 ifelse(lag(n = 12, funds != "no"), "yes",
+                                                                                                        ifelse(lag(n = 13, funds != "no"), "yes",
+                                                                                                               ifelse(lag(n = 14, funds != "no"), "yes",
+                                                                                                                      ifelse(lag(n = 15, funds != "no"), "yes",
+                                                                                                                             ifelse(lag(n = 16, funds != "no"), "yes",
+                                                                                                                                    ifelse(lag(n = 17, funds != "no"), "yes",
+                                                                                                                                           ifelse(lag(n = 18, funds != "no"), "yes",
+                                                                                                                                                  ifelse(lag(n = 19, funds != "no"), "yes",
+                                                                                                                                                         ifelse(lag(n = 20, funds != "no"), "yes",
+                                                                                                                                                                ifelse(lag(n = 21, funds != "no"), "yes",
+                                                                                                                                                                       ifelse(lag(n = 22, funds != "no"), "yes",
+                                                                                                                                                                              ifelse(lag(n = 23, funds != "no"), "yes",
+                                                                                                                                                                                     ifelse(lag(n = 24, funds != "no"), "yes",
+                                                                                                                                                                                            ifelse(lag(n = 25, funds != "no"), "yes",
+                                                                                                                             funds)))))))))))))))))))))))))) %>%
+    filter(funds != "no") %>%
+    mutate(group = ifelse(funds != "yes", funds, lag(funds))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    mutate(group = ifelse(group != "yes", group, lag(group))) %>%
+    select(-funds) %>%
+    pivot_wider(names_from = c(group), 
+                values_from = c(value)) %>%
+  return(funds_result)
+}
+
+
+```
+
+```{r execute functions, warning = FALSE}
+# to use when length of funds_details == 2
+to_string_1 <- function(x) { 
+  z <- x %>%
+    rename(fund_source_1 = 1) %>%
+    unnest(fund_source_1, .drop = FALSE) %>% 
+    group_by(name) %>% 
+    summarise(
+      fund_source_1 = toString(fund_source_1),
+      name = as.character(name)) %>%
+      distinct()
+  return(z)
+}
+
+
+# to use when length of funds_details == 3
+to_string_2 <- function(x) { 
+  z <- x %>%
+    rename(fund_source_1 = 1,
+           fund_source_2 = 2) %>%
+    #unnest(2:ncol(.), keep_empty = TRUE) %>% 
+    unnest(fund_source_1, fund_source_2, .drop = FALSE) %>% 
+    #unchop(fund_source_1, fund_source_2) %>% 
+    group_by(name) %>% 
+    summarise(
+      fund_source_1 = toString(fund_source_1),
+      fund_source_2 = toString(fund_source_2),
+      name = as.character(name)) %>%
+      distinct()
+  return(z)
+}
+
+# to use when length of funds_details == 4
+to_string_3 <- function(x) { 
+  z <- x %>%
+    rename(fund_source_1 = 1,
+           fund_source_2 = 2,
+           fund_source_3 = 3) %>%
+    #unnest(2:ncol(.), keep_empty = TRUE) %>% 
+    unnest(fund_source_1, fund_source_2, fund_source_3, .drop = FALSE) %>% 
+    #unchop(fund_source_1, fund_source_2, fund_source_3) %>% 
+    group_by(name) %>% 
+    summarise(
+      fund_source_1 = toString(fund_source_1),
+      fund_source_2 = toString(fund_source_2),
+      fund_source_3 = toString(fund_source_3),
+      name = as.character(name)) %>%
+      distinct()
+  return(z)
+}
+
+# to use when length of funds_details == 2
+to_sentence_1 <- function(x) {
+  z <- x %>%
+   mutate(funds_2_sentences = str_split(startsWith('fund_source'), "(?<=\\.)\\s(?=[A-Z])")) %>%
+   select(name, funds_2_sentences)
+  sentences <- data.frame(matrix(unlist(z$funds_2_sentences), nrow=length(z$funds_2_sentences), byrow=TRUE))
+  name <- z %>%
+    select(name)
+  n <- unique(name$name)
+  sentences_1 <- sentences %>%
+    pivot_longer(cols = everything(),
+                 names_to = "value",
+                 values_to = "funds_use") %>%
+    select(-value)
+  sentences_1$name <- n
+  sentences_2 <- sentences_1 %>%
+    select(name, funds_use)
+ return(sentences_2)
+}
+
+# to use when length of funds_details == 3
+to_sentence_2 <- function(x) {
+  z <- x %>%
+   mutate(funds_2_sentences = str_split(fund_source_2, "(?<=\\.)\\s(?=[A-Z])")) %>%
+   select(name, funds_2_sentences)
+  sentences <- data.frame(matrix(unlist(z$funds_2_sentences), nrow=length(z$funds_2_sentences), byrow=TRUE))
+  name <- z %>%
+    select(name)
+  n <- unique(name$name)
+  sentences_1 <- sentences %>%
+    pivot_longer(cols = everything(),
+                 names_to = "value",
+                 values_to = "funds_use") %>%
+    select(-value)
+  sentences_1$name <- n
+  sentences_2 <- sentences_1 %>%
+    select(name, funds_use)
+ return(sentences_2)
+}
+
+# to use when length of funds_details == 4
+to_sentence_3 <- function(x) {
+  z <- x %>%
+   mutate(funds_3_sentences = str_split(fund_source_3, "(?<=\\.)\\s(?=[A-Z])")) %>%
+   select(name, funds_3_sentences)
+  sentences <- data.frame(matrix(unlist(z$funds_3_sentences), nrow=length(z$funds_3_sentences), byrow=TRUE))
+  name <- z %>%
+    select(name)
+  n <- unique(name$name)
+  sentences_1 <- sentences %>%
+    pivot_longer(cols = everything(),
+                 names_to = "value",
+                 values_to = "funds_use") %>%
+    select(-value)
+  sentences_1$name <- n
+  sentences_2 <- sentences_1 %>%
+    select(name, funds_use)
+ return(sentences_2)
+}
+
+mapping_column <- function(x) {
+  z <- x %>%
+    mutate(ser_a = ifelse(str_detect(funds_use, "Series A"), funds_use, "No"),
+           ser_b = ifelse(str_detect(funds_use, "Series B"), funds_use, "No"),
+           ser_c = ifelse(str_detect(funds_use, "Series C"), funds_use, "No"),
+           ser_d = ifelse(str_detect(funds_use, "Series D"), funds_use, "No"),
+           ser_e = ifelse(str_detect(funds_use, "Series E"), funds_use, "No")) %>%
+    mutate(other = ifelse(ser_a == "No" 
+                          & ser_b == "No" 
+                          & ser_c == "No" 
+                          & ser_d == "No"
+                          & ser_e == "No", funds_use, "No")) %>%
+    pivot_longer(cols = c(ser_a, ser_b, ser_c, ser_d, ser_e, other),
+                 names_to = "sec_des",
+                 values_to = "resp_funding") %>%
+    filter(`resp_funding` != "No") %>%
+    select(-resp_funding) %>%
+    filter(is.character(funds_use))
+  return(z)
+}
+```
+
+```{r execute_functions}
+
+### https://stackoverflow.com/questions/14748557/skipping-error-in-for-loop
+
+for (i in 1:length(chi_files)) {
+  funds_loop <- funds(chi_files[[i]])
+  funds_loop$name <- i
+  funds_details <- as.data.frame(funds_loop)
+  try({
+    if (ncol(funds_details) == 2){
+      funds_string <- to_string_1(funds_details) # this is where the error is
+      funds_pieced <- to_sentence_1(funds_string)
+      funds_mapped <- mapping_column(funds_pieced)
+      assign(paste0("funds_", i), funds_mapped)
+        }
+    else  if (ncol(funds_details) == 3){
+      funds_string <- to_string_2(funds_details)
+      funds_pieced <- to_sentence_2(funds_string)
+      funds_mapped <- mapping_column(funds_pieced)
+      assign(paste0("funds_", i), funds_mapped)
+    }
+    else  if (ncol(funds_details) == 4){
+      funds_string <- to_string_3(funds_details)
+      funds_pieced <- to_sentence_3(funds_string)
+      funds_mapped <- mapping_column(funds_pieced)
+      assign(paste0("funds_", i), funds_mapped)
+    }
+    else {
+      print("A lot or a little columns")
+      #stop('Urgh something is amiss!')
+    }
+  })
+}
+
+```
+
+```{r}
+chi_data_sets <- rbind(
+  funds_1,
+  funds_17,
+  funds_19,
+  funds_23,
+  funds_28,
+  funds_32,
+  funds_46,
+  funds_47,
+  funds_51,
+  funds_53,
+  funds_59,
+  funds_60,
+  funds_63,
+  funds_64,
+  funds_70,
+  funds_74
+)
+
+chi_funds_1 <-
+  left_join(chi_data_sets, chi_file_details) 
+#%>%
+#  pivot_wider(names_from = "sec_des",
+ #             values_from = "funds_use") %>%
+  #mutate_all(as.character)
+
+#write.csv(chi_funds_1,"chi_funds.csv", row.names = FALSE)
+
+```
